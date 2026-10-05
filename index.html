@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#10201a">
+  <meta name="description" content="Cognexus — graphe de connaissances pour structurer un projet de recherche.">
+  <title>Cognexus</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./styles.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/cytoscape@3.30.4/dist/cytoscape.min.js"></script>
+  <script defer src="./app.js"></script>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">C</div>
+        <div>
+          <h1>Cognexus</h1>
+          <p>Research Knowledge Graph</p>
+        </div>
+      </div>
+
+      <div class="topbar-center">
+        <label class="search">
+          <span aria-hidden="true">⌕</span>
+          <input id="searchInput" type="search" placeholder="Rechercher un nœud, un tag, une note…" autocomplete="off">
+          <kbd>Ctrl K</kbd>
+        </label>
+      </div>
+
+      <div class="topbar-actions">
+        <button id="installBtn" class="button ghost hidden" type="button">Installer</button>
+        <button id="themeBtn" class="icon-button" type="button" aria-label="Changer de thème">◐</button>
+        <button id="exportBtn" class="button ghost" type="button">Exporter</button>
+        <label class="button ghost file-button">
+          Importer
+          <input id="importInput" type="file" accept=".json,application/json" hidden>
+        </label>
+        <button id="newNodeBtn" class="button primary" type="button">+ Nœud</button>
+      </div>
+    </header>
+
+    <aside class="sidebar">
+      <section>
+        <p class="eyebrow">Projet</p>
+        <input id="projectName" class="project-name" type="text" value="Mon projet de recherche" aria-label="Nom du projet">
+        <p id="saveState" class="save-state">Sauvegardé localement</p>
+      </section>
+
+      <section>
+        <div class="section-heading">
+          <span>Types de nœuds</span>
+          <button id="allTypesBtn" class="text-button" type="button">Tout</button>
+        </div>
+        <div id="typeFilters" class="type-filters"></div>
+      </section>
+
+      <section>
+        <p class="section-heading">Vue</p>
+        <div class="sidebar-buttons">
+          <button id="newEdgeBtn" class="sidebar-button" type="button"><span>↗</span> Nouvelle relation</button>
+          <button id="layoutBtn" class="sidebar-button" type="button"><span>✦</span> Réorganiser</button>
+          <button id="fitBtn" class="sidebar-button" type="button"><span>⌗</span> Ajuster la vue</button>
+        </div>
+      </section>
+
+      <section class="stats-section">
+        <p class="section-heading">Aperçu</p>
+        <div class="stats-grid">
+          <div><strong id="nodeCount">0</strong><span>Nœuds</span></div>
+          <div><strong id="edgeCount">0</strong><span>Relations</span></div>
+        </div>
+      </section>
+
+      <section class="sidebar-footer">
+        <button id="demoBtn" class="text-button" type="button">Charger un exemple</button>
+        <button id="clearBtn" class="text-button danger-text" type="button">Vider le projet</button>
+      </section>
+    </aside>
+
+    <main class="workspace">
+      <div class="graph-toolbar" aria-label="Outils du graphe">
+        <span id="visibleCount" class="graph-status">0 nœud visible</span>
+        <span class="graph-hint">Molette : zoom · Glisser : déplacer · Clic : ouvrir</span>
+      </div>
+      <div id="cy" class="graph" aria-label="Graphe de connaissances interactif"></div>
+
+      <div id="emptyState" class="empty-state">
+        <div class="empty-icon">◎</div>
+        <h2>Construisez votre réseau de connaissances</h2>
+        <p>Ajoutez un premier concept, article, hypothèse, expérience, résultat ou section de manuscrit.</p>
+        <button id="emptyAddBtn" class="button primary" type="button">Créer le premier nœud</button>
+      </div>
+    </main>
+
+    <aside id="inspector" class="inspector" aria-label="Fiche du nœud">
+      <div class="inspector-header">
+        <div>
+          <p class="eyebrow" id="inspectorMode">Nœud</p>
+          <h2 id="inspectorTitle">Détails</h2>
+        </div>
+        <button id="closeInspectorBtn" class="icon-button" type="button" aria-label="Fermer">×</button>
+      </div>
+
+      <form id="nodeForm" class="inspector-form">
+        <label>
+          <span>Titre</span>
+          <input id="nodeTitle" type="text" required maxlength="160" placeholder="Nom du nœud">
+        </label>
+
+        <div class="form-row">
+          <label>
+            <span>Type</span>
+            <select id="nodeType"></select>
+          </label>
+          <label>
+            <span>Statut</span>
+            <select id="nodeStatus">
+              <option value="established">Établi</option>
+              <option value="hypothetical">Hypothétique</option>
+              <option value="to-check">À vérifier</option>
+            </select>
+          </label>
+        </div>
+
+        <label>
+          <span>Résumé</span>
+          <textarea id="nodeSummary" rows="4" placeholder="Idée essentielle, résultat ou rôle dans le projet…"></textarea>
+        </label>
+
+        <label>
+          <span>Tags</span>
+          <input id="nodeTags" type="text" placeholder="attention, EEG, mémoire">
+          <small>Séparés par des virgules.</small>
+        </label>
+
+        <label>
+          <span>Référence / citation</span>
+          <input id="nodeReference" type="text" placeholder="Auteur, année, DOI…">
+        </label>
+
+        <label>
+          <span>Lien</span>
+          <input id="nodeUrl" type="url" placeholder="https://…">
+        </label>
+
+        <label>
+          <span>Notes</span>
+          <textarea id="nodeNotes" rows="7" placeholder="Notes libres, implications, limites, prochaines étapes…"></textarea>
+        </label>
+
+        <div class="inspector-actions">
+          <button id="deleteNodeBtn" class="button danger" type="button">Supprimer</button>
+          <button class="button primary" type="submit">Enregistrer</button>
+        </div>
+      </form>
+
+      <section id="connectionsPanel" class="connections-panel">
+        <div class="section-heading">
+          <span>Connexions</span>
+          <button id="connectFromNodeBtn" class="text-button" type="button">+ Relation</button>
+        </div>
+        <div id="connectionsList" class="connections-list"></div>
+      </section>
+    </aside>
+  </div>
+
+  <dialog id="edgeDialog" class="dialog">
+    <form id="edgeForm" method="dialog">
+      <div class="dialog-header">
+        <div>
+          <p class="eyebrow">Connexion</p>
+          <h2>Nouvelle relation</h2>
+        </div>
+        <button id="closeEdgeDialogBtn" class="icon-button" type="button" aria-label="Fermer">×</button>
+      </div>
+
+      <label>
+        <span>Source</span>
+        <select id="edgeSource" required></select>
+      </label>
+      <label>
+        <span>Relation</span>
+        <select id="edgeRelation" required>
+          <option value="related to">est lié à</option>
+          <option value="supports">soutient</option>
+          <option value="contradicts">contredit</option>
+          <option value="tests">teste</option>
+          <option value="measures">mesure</option>
+          <option value="derived from">dérive de</option>
+          <option value="discussed in">est discuté dans</option>
+          <option value="cites">cite</option>
+          <option value="uses">utilise</option>
+          <option value="depends on">dépend de</option>
+        </select>
+      </label>
+      <label>
+        <span>Cible</span>
+        <select id="edgeTarget" required></select>
+      </label>
+      <label>
+        <span>Libellé personnalisé <em>optionnel</em></span>
+        <input id="edgeLabel" type="text" maxlength="80" placeholder="Laisser vide pour utiliser la relation">
+      </label>
+
+      <div class="dialog-actions">
+        <button id="cancelEdgeBtn" class="button ghost" type="button">Annuler</button>
+        <button class="button primary" type="submit">Créer la relation</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
